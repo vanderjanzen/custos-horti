@@ -1,0 +1,19 @@
+# PlatformIO
+.pio/
+.vscode/
+firmware/.pio/
+
+# JetBrains
+.idea/
+cmake-build-*/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
