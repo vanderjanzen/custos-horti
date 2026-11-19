@@ -1,7 +1,7 @@
 # Custos Horti – Dashboard + Datenbank
 # Lokal:   docker compose up -d --build   -> http://localhost:3100
-# Dokploy: als "Compose"-Service aus dem GitHub-Repo anlegen,
-#          INGEST_API_KEY und POSTGRES_PASSWORD als Umgebungsvariablen setzen.
+# Dokploy: als "Compose"-Service aus dem GitHub-Repo anlegen und unter Environment setzen:
+#          POSTGRES_PASSWORD, INGEST_API_KEY, ADMIN_PASSWORD, SESSION_SECRET (+ optional INGEST_URL)
 services:
   custos-db:
     image: postgres:17-alpine
@@ -18,7 +18,9 @@ services:
       retries: 10
 
   dashboard:
-    build: ./dashboard
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
     restart: unless-stopped
     depends_on:
       custos-db:
@@ -26,6 +28,12 @@ services:
     environment:
       DATABASE_URL: postgres://custos:${POSTGRES_PASSWORD:-custos}@custos-db:5432/custos
       INGEST_API_KEY: ${INGEST_API_KEY:-bitte-aendern}
+      # Adresse, an die die ESPs ihre Messwerte schicken (im Heimnetz ohne HTTPS am stabilsten)
+      INGEST_URL: ${INGEST_URL:-}
+      # Login: ohne ADMIN_PASSWORD ist das Dashboard offen (nur lokal sinnvoll)
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
     ports:
       - "${DASHBOARD_PORT:-3100}:3000"
 

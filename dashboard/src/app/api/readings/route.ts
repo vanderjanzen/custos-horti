@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql, ensureSchema, RANGES, RESOLUTIONS, isRange } from "@/lib/db";
+import { sanitizeConfig } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
 
@@ -24,23 +25,38 @@ export async function POST(req: NextRequest) {
   const deviceId = typeof body.device_id === "string" ? body.device_id.slice(0, 64) : "";
   const temperature = num(body.temperature);
   const humidity = num(body.humidity);
-  if (!deviceId || (temperature === null && humidity === null)) {
-    return NextResponse.json({ error: "device_id and a value required" }, { status: 400 });
+  if (!deviceId) {
+    return NextResponse.json({ error: "device_id required" }, { status: 400 });
   }
   const fw = typeof body.fw === "string" ? body.fw.slice(0, 32) : null;
   const rssi = num(body.rssi);
+  const uptime = num(body.uptime);
+  const heap = num(body.heap);
+  const ip = typeof body.ip === "string" ? body.ip.slice(0, 45) : null;
+  const modules = Array.isArray(body.modules)
+    ? body.modules.filter((m): m is string => typeof m === "string").slice(0, 20)
+    : null;
 
   await ensureSchema();
-  await sql`
-    INSERT INTO devices (id, fw, rssi, last_seen)
-    VALUES (${deviceId}, ${fw}, ${rssi}, now())
+  const [device] = await sql<{ config: unknown }[]>`
+    INSERT INTO devices (id, fw, rssi, uptime, heap, ip, modules, last_seen)
+    VALUES (${deviceId}, ${fw}, ${rssi}, ${uptime}, ${heap}, ${ip}, ${modules}, now())
     ON CONFLICT (id) DO UPDATE
-      SET fw = EXCLUDED.fw, rssi = EXCLUDED.rssi, last_seen = now()`;
-  await sql`
-    INSERT INTO readings (device_id, temperature, humidity)
-    VALUES (${deviceId}, ${temperature}, ${humidity})`;
+      SET fw = COALESCE(EXCLUDED.fw, devices.fw), rssi = COALESCE(EXCLUDED.rssi, devices.rssi),
+          uptime = COALESCE(EXCLUDED.uptime, devices.uptime), heap = COALESCE(EXCLUDED.heap, devices.heap),
+          ip = COALESCE(EXCLUDED.ip, devices.ip), modules = COALESCE(EXCLUDED.modules, devices.modules),
+          last_seen = now()
+    RETURNING config`;
+  if (temperature !== null || humidity !== null) {
+    await sql`
+      INSERT INTO readings (device_id, temperature, humidity)
+      VALUES (${deviceId}, ${temperature}, ${humidity})`;
+  }
 
-  return NextResponse.json({ ok: true }, { status: 201 });
+  // Der ESP uebernimmt diese Config, falls sie sich geaendert hat
+  // (feste Key-Reihenfolge, damit der ESP nur bei echten Aenderungen neu schreibt)
+  const config = device?.config ? sanitizeConfig(device.config) : null;
+  return NextResponse.json({ ok: true, config }, { status: 201 });
 }
 
 /**

@@ -34,6 +34,14 @@ export function ensureSchema(): Promise<void> {
           humidity    REAL,
           created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
         )`;
+      // v0.2: Geraete-Config + Zustandsdaten des Standardmoduls
+      await sql`
+        ALTER TABLE devices
+          ADD COLUMN IF NOT EXISTS config  JSONB,
+          ADD COLUMN IF NOT EXISTS uptime  INTEGER,
+          ADD COLUMN IF NOT EXISTS heap    INTEGER,
+          ADD COLUMN IF NOT EXISTS ip      TEXT,
+          ADD COLUMN IF NOT EXISTS modules TEXT[]`;
       await sql`
         CREATE INDEX IF NOT EXISTS readings_device_time
         ON readings (device_id, created_at DESC)`;

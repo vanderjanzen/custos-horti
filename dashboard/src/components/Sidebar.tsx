@@ -103,7 +103,7 @@ export default function Sidebar() {
         </div>
       ))}
       <div className="sidebar-foot">
-        <span>v0.1.0</span>
+        <span>v0.2.0</span>
         <span>{devices ? `${devices.length} Sensor${devices.length === 1 ? "" : "en"}` : "…"}</span>
       </div>
     </aside>

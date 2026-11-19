@@ -65,6 +65,12 @@ export default function DevicesView() {
     reload();
   }
 
+  async function remove(id: string, label: string) {
+    if (!confirm(`„${label}“ samt allen Messwerten löschen?`)) return;
+    await fetch(`/api/devices/${id}`, { method: "DELETE" });
+    reload();
+  }
+
   const online = devices?.filter((d) => isOnline(d.last_seen, now)).length ?? 0;
 
   return (
@@ -129,11 +135,21 @@ export default function DevicesView() {
                 <span>{ago(d.last_seen, now)}</span>
                 {d.rssi != null && <span>{d.rssi} dBm</span>}
                 {d.fw && <span>fw {d.fw}</span>}
+                {d.ip && <span>{d.ip}</span>}
+                {d.config?.modules?.map((m) => (
+                  <span key={m.type + String(m.pin ?? "")}>
+                    {m.type}
+                    {m.pin != null && `@${m.pin}`}
+                  </span>
+                ))}
               </div>
 
               <div className="device-actions">
                 <button className="btn btn-ghost" onClick={() => rename(d.id, d.name)}>
                   umbenennen
+                </button>
+                <button className="btn btn-ghost" onClick={() => remove(d.id, deviceLabel(d))}>
+                  entfernen
                 </button>
               </div>
             </article>

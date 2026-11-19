@@ -4,7 +4,12 @@ export function isOnline(lastSeen: string, now = Date.now()) {
   return now - new Date(lastSeen).getTime() < ONLINE_MS;
 }
 
+export function neverSeen(iso: string) {
+  return new Date(iso).getTime() < 86400_000;
+}
+
 export function ago(iso: string, now = Date.now()) {
+  if (neverSeen(iso)) return "noch nie gesehen";
   const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
   if (s < 60) return `vor ${s} s`;
   if (s < 3600) return `vor ${Math.round(s / 60)} min`;

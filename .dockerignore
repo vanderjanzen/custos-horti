@@ -1,0 +1,7 @@
+**/node_modules
+**/.next
+**/.pio
+.git
+.idea
+**/.env
+**/.env.local

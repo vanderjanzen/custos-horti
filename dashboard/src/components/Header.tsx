@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useDevices } from "@/hooks/useDevices";
 import { isOnline } from "@/lib/format";
 import { IconLeaf, IconUser } from "./Icons";
@@ -8,6 +10,24 @@ import { IconLeaf, IconUser } from "./Icons";
 export default function Header() {
   const { devices } = useDevices();
   const online = devices?.filter((d) => isOnline(d.last_seen)).length ?? 0;
+  const [menu, setMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenu(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [menu]);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <header className="header glass">
@@ -30,9 +50,22 @@ export default function Header() {
             {online} / {devices?.length ?? 0} live
           </span>
         </div>
-        <button className="avatar" aria-label="Benutzer">
-          <IconUser />
-        </button>
+        <div className="menu-anchor" ref={menuRef}>
+          <button className="avatar" aria-label="Benutzer" onClick={() => setMenu((m) => !m)}>
+            <IconUser />
+          </button>
+          {menu && (
+            <div className="menu glass">
+              <div className="menu-head">
+                <div>Admin</div>
+                <div className="eyebrow">angemeldet</div>
+              </div>
+              <button className="menu-item" onClick={logout}>
+                Abmelden
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
