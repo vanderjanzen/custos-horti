@@ -6,13 +6,14 @@ export async function POST(req: NextRequest) {
   const user = typeof body.user === "string" ? body.user.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
 
-  if (!(await checkCredentials(user, password))) {
+  const role = await checkCredentials(user, password);
+  if (!role) {
     await new Promise((r) => setTimeout(r, 600)); // bremst Durchprobieren
     return NextResponse.json({ error: "Benutzer oder Passwort falsch" }, { status: 401 });
   }
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, await createSession(user), {
+  const res = NextResponse.json({ ok: true, role });
+  res.cookies.set(SESSION_COOKIE, await createSession(user, role), {
     httpOnly: true,
     sameSite: "lax",
     secure: req.headers.get("x-forwarded-proto") === "https" || req.nextUrl.protocol === "https:",

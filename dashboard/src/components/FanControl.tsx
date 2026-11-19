@@ -5,6 +5,7 @@ import type { DeviceSummary } from "@/app/api/devices/route";
 import { MODULES, type ModuleConfig } from "@/lib/modules";
 import Segmented from "./Segmented";
 import ParamField from "./ParamField";
+import { useRole } from "@/hooks/useRole";
 
 const FAN = MODULES.find((m) => m.type === "fan")!;
 
@@ -13,6 +14,7 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
   const saved = device.config?.modules.find((m) => m.type === "fan") as ModuleConfig | undefined;
   const [cfg, setCfg] = useState<ModuleConfig | null>(saved ?? null);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const { isGuest } = useRole();
 
   // Wenn ein anderes Geraet gewaehlt wird, Formular neu fuellen
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
   const speed = Number(cfg.speed ?? 5);
 
   return (
-    <section className="panel glass reveal fan">
+    <section className={`panel glass reveal fan ${isGuest ? "is-readonly" : ""}`}>
       <div className="panel-head">
         <div>
           <h2 className="panel-title">Lüfter</h2>
@@ -57,6 +59,9 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
             {device.fan_mode && ` · ${device.fan_mode === "auto" ? "Automatik" : "manuell"}`}
           </p>
         </div>
+        {isGuest ? (
+          <span className="tag">nur Ansicht</span>
+        ) : (
         <Segmented
           value={mode}
           onChange={(v) => set("mode", v)}
@@ -65,6 +70,7 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
             { value: "manual", label: "Manuell" },
           ]}
         />
+        )}
       </div>
 
       {mode === "manual" ? (
@@ -76,6 +82,7 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
             step={1}
             value={speed}
             onChange={(e) => set("speed", Number(e.target.value))}
+            disabled={isGuest}
             style={{ "--p": `calc(11px + (100% - 22px) * ${speed / 10})` } as React.CSSProperties}
           />
           <div className="fan-steps">
@@ -102,12 +109,14 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
         </div>
       )}
 
+      {!isGuest && (
       <div className="wizard-actions" style={{ marginTop: 18 }}>
         <span className="hint">Der ESP übernimmt die Einstellung mit der nächsten Messung.</span>
         <button className="btn btn-primary" onClick={save} disabled={state === "saving"}>
           {state === "saving" ? "Speichere…" : state === "saved" ? "Gespeichert ✓" : "Übernehmen"}
         </button>
       </div>
+      )}
     </section>
   );
 }

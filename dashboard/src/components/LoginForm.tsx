@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { IconLeaf } from "./Icons";
+import { resetRole } from "@/hooks/useRole";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function LoginForm() {
       gsap.fromTo(card.current, { x: -8 }, { x: 0, duration: 0.5, ease: "elastic.out(1, 0.3)" });
       return;
     }
+    resetRole();
     const next = params.get("next");
     router.replace(next && next.startsWith("/") ? next : "/");
     router.refresh();

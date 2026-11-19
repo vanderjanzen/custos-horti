@@ -7,6 +7,7 @@ import { useDevices } from "@/hooks/useDevices";
 import { isOnline } from "@/lib/format";
 import { IconLeaf, IconUser } from "./Icons";
 import Segmented from "./Segmented";
+import { resetRole, useRole } from "@/hooks/useRole";
 import { currentTheme, setTheme, type Theme } from "@/lib/theme";
 
 export default function Header() {
@@ -15,6 +16,7 @@ export default function Header() {
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { user, isGuest } = useRole();
   const [theme, setThemeState] = useState<Theme>("dark");
   useEffect(() => setThemeState(currentTheme()), []);
 
@@ -34,6 +36,7 @@ export default function Header() {
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
+    resetRole();
     router.replace("/login");
     router.refresh();
   }
@@ -66,8 +69,8 @@ export default function Header() {
           {menu && (
             <div className="menu glass">
               <div className="menu-head">
-                <div>Admin</div>
-                <div className="eyebrow">angemeldet</div>
+                <div>{user ?? "…"}</div>
+                <div className="eyebrow">{isGuest ? "Gast · nur lesen" : "Admin"}</div>
               </div>
               <div className="menu-row">
                 <span>Darstellung</span>

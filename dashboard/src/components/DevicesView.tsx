@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { Flip } from "gsap/Flip";
 import { useGSAP } from "@gsap/react";
 import { useDevices, useNow } from "@/hooks/useDevices";
+import { useRole } from "@/hooks/useRole";
 import { ago, deviceLabel, isOnline } from "@/lib/format";
 import Segmented from "./Segmented";
 import { IconGrid, IconList, IconPlus } from "./Icons";
@@ -18,6 +19,7 @@ export default function DevicesView() {
   const { devices, error, reload } = useDevices(10_000);
   const now = useNow(1000);
   const [view, setView] = useState<View>("grid");
+  const { isGuest } = useRole();
   const root = useRef<HTMLDivElement>(null);
   const flipState = useRef<Flip.FlipState | null>(null);
 
@@ -92,9 +94,11 @@ export default function DevicesView() {
               { value: "list", label: <IconList size={15} />, title: "Liste" },
             ]}
           />
-          <Link href="/geraete/neu" className="btn btn-primary">
-            <IconPlus size={16} /> Gerät hinzufügen
-          </Link>
+          {!isGuest && (
+            <Link href="/geraete/neu" className="btn btn-primary">
+              <IconPlus size={16} /> Gerät hinzufügen
+            </Link>
+          )}
         </div>
       </div>
 
@@ -144,6 +148,7 @@ export default function DevicesView() {
                 ))}
               </div>
 
+              {!isGuest && (
               <div className="device-actions">
                 <button className="btn btn-ghost" onClick={() => rename(d.id, d.name)}>
                   umbenennen
@@ -152,6 +157,7 @@ export default function DevicesView() {
                   entfernen
                 </button>
               </div>
+              )}
             </article>
           );
         })}

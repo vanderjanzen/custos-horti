@@ -9,6 +9,7 @@ import { useDevices } from "@/hooks/useDevices";
 import { isOnline } from "@/lib/format";
 import { IconDashboard, IconDevices, IconLogs, IconPlus, IconSettings, IconSprout } from "./Icons";
 import { usePhase } from "@/hooks/usePhase";
+import { useRole } from "@/hooks/useRole";
 import { PHASES } from "@/lib/phases";
 
 const groups = [
@@ -24,7 +25,7 @@ const groups = [
     label: "Hardware",
     items: [
       { href: "/geraete", label: "Geräte", icon: IconDevices, count: true },
-      { href: "/geraete/neu", label: "Gerät hinzufügen", icon: IconPlus },
+      { href: "/geraete/neu", label: "Gerät hinzufügen", icon: IconPlus, adminOnly: true },
     ],
   },
   {
@@ -38,6 +39,7 @@ export default function Sidebar() {
   const { devices } = useDevices();
   const online = devices?.filter((d) => isOnline(d.last_seen)).length ?? 0;
   const { phase } = usePhase();
+  const { isGuest } = useRole();
   const root = useRef<HTMLElement>(null);
 
   // Leuchtender Indikator gleitet zum aktiven Reiter
@@ -77,7 +79,7 @@ export default function Sidebar() {
           <div className="eyebrow">{g.label}</div>
           <nav className="nav">
             <span className="nav-indicator" />
-            {g.items.map((item) => {
+            {g.items.filter((item) => !(isGuest && "adminOnly" in item && item.adminOnly)).map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
               const cls = `nav-link ${active ? "is-active" : ""}`;

@@ -1,7 +1,7 @@
 # Custos Horti – Dashboard + Datenbank
 # Lokal:   docker compose up -d --build   -> http://localhost:3100
 # Dokploy: als "Compose"-Service aus dem GitHub-Repo anlegen und unter Environment setzen:
-#          POSTGRES_PASSWORD, INGEST_API_KEY, ADMIN_PASSWORD, SESSION_SECRET (+ optional INGEST_URL)
+#          POSTGRES_PASSWORD, INGEST_API_KEY, ADMIN_PASSWORD, SESSION_SECRET (+ optional INGEST_URL, GUEST_PASSWORD)
 services:
   custos-db:
     image: postgres:17-alpine
@@ -34,6 +34,9 @@ services:
       ADMIN_USER: ${ADMIN_USER:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SESSION_SECRET: ${SESSION_SECRET:-}
+      # Gastzugang (nur lesen) – ohne GUEST_PASSWORD deaktiviert
+      GUEST_USER: ${GUEST_USER:-gast}
+      GUEST_PASSWORD: ${GUEST_PASSWORD:-}
     ports:
       - "${DASHBOARD_PORT:-3100}:3000"
 

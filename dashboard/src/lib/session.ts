@@ -3,7 +3,8 @@
 export const SESSION_COOKIE = "custos_session";
 export const SESSION_DAYS = 30;
 
-export type Session = { user: string; role: "admin"; exp: number };
+export type Role = "admin" | "guest";
+export type Session = { user: string; role: Role; exp: number };
 
 const enc = new TextEncoder();
 
@@ -41,8 +42,8 @@ export function authEnabled() {
   return Boolean(process.env.ADMIN_PASSWORD);
 }
 
-export async function createSession(user: string): Promise<string> {
-  const payload: Session = { user, role: "admin", exp: Date.now() + SESSION_DAYS * 86400_000 };
+export async function createSession(user: string, role: Role): Promise<string> {
+  const payload: Session = { user, role, exp: Date.now() + SESSION_DAYS * 86400_000 };
   const body = b64url(enc.encode(JSON.stringify(payload)));
   return `${body}.${b64url(await hmac(body))}`;
 }
@@ -60,10 +61,21 @@ export async function readSession(token: string | undefined): Promise<Session | 
   }
 }
 
-/** Passwortvergleich ohne Timing-Leck */
-export async function checkCredentials(user: string, password: string) {
-  const expectedUser = process.env.ADMIN_USER || "admin";
-  const expectedPw = process.env.ADMIN_PASSWORD || "";
+async function matches(user: string, password: string, expectedUser: string, expectedPw: string) {
   const [a, b] = await Promise.all([hmac(`${user}\n${password}`), hmac(`${expectedUser}\n${expectedPw}`)]);
   return expectedPw.length > 0 && equal(a, b);
+}
+
+/**
+ * Passwortvergleich ohne Timing-Leck. Gibt die Rolle zurueck oder null.
+ * Admin: ADMIN_USER / ADMIN_PASSWORD · Gast (nur lesen): GUEST_USER / GUEST_PASSWORD
+ */
+export async function checkCredentials(user: string, password: string): Promise<Role | null> {
+  if (await matches(user, password, process.env.ADMIN_USER || "admin", process.env.ADMIN_PASSWORD || "")) {
+    return "admin";
+  }
+  if (await matches(user, password, process.env.GUEST_USER || "gast", process.env.GUEST_PASSWORD || "")) {
+    return "guest";
+  }
+  return null;
 }

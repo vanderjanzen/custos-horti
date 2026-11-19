@@ -4,6 +4,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { usePhase } from "@/hooks/usePhase";
+import { useRole } from "@/hooks/useRole";
 import { PHASES } from "@/lib/phases";
 
 function days(since: string | null) {
@@ -13,6 +14,7 @@ function days(since: string | null) {
 
 export default function PhaseView() {
   const { phase, since, setPhase } = usePhase();
+  const { isGuest } = useRole();
   const root = useRef<HTMLDivElement>(null);
 
   // Aktive Karte leicht "aufleuchten" lassen
@@ -56,7 +58,8 @@ export default function PhaseView() {
             <button
               key={p.key}
               className={`phase-card glass float reveal ${active ? "is-active" : ""}`}
-              onClick={() => setPhase(p.key)}
+              onClick={() => !isGuest && setPhase(p.key)}
+              disabled={isGuest && !active}
             >
               <div className="phase-top">
                 <span className="phase-orb" />
@@ -79,7 +82,7 @@ export default function PhaseView() {
                   {p.hum[0]}–{p.hum[1]} %
                 </dd>
               </dl>
-              <span className="phase-cta">{active ? "Aktiv" : "Auswählen"}</span>
+              <span className="phase-cta">{active ? "Aktiv" : isGuest ? "" : "Auswählen"}</span>
             </button>
           );
         })}
