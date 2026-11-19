@@ -18,9 +18,12 @@ export async function GET(req: NextRequest) {
     ? `${req.headers.get("x-forwarded-proto") ?? "https"}://${req.headers.get("x-forwarded-host")}`
     : req.nextUrl.origin;
 
-  return NextResponse.json({
+  return NextResponse.json(
+    {
     ingestKey: process.env.INGEST_API_KEY ?? "",
     server: process.env.INGEST_URL || `${origin}/api/readings`,
     firmware,
-  });
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

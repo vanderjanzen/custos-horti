@@ -41,7 +41,9 @@ export function ensureSchema(): Promise<void> {
           ADD COLUMN IF NOT EXISTS uptime  INTEGER,
           ADD COLUMN IF NOT EXISTS heap    INTEGER,
           ADD COLUMN IF NOT EXISTS ip      TEXT,
-          ADD COLUMN IF NOT EXISTS modules TEXT[]`;
+          ADD COLUMN IF NOT EXISTS modules TEXT[],
+          ADD COLUMN IF NOT EXISTS fan_speed SMALLINT,
+          ADD COLUMN IF NOT EXISTS fan_mode TEXT`;
       await sql`
         CREATE INDEX IF NOT EXISTS readings_device_time
         ON readings (device_id, created_at DESC)`;

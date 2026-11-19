@@ -2,6 +2,15 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+// Gemeinsame Messwerte, damit Module aufeinander reagieren koennen
+// (z. B. Luefter-Automatik nutzt Temperatur/Feuchte vom DHT-Modul).
+struct SharedState {
+  float temperature = NAN;
+  float humidity = NAN;
+  uint32_t updated = 0;  // millis() der letzten Messung
+};
+extern SharedState g_state;
+
 // Basisklasse fuer alle Module.
 // begin(): Konfiguration uebernehmen (z. B. Pin)
 // loop():  laeuft dauerhaft (optional)

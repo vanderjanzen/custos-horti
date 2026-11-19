@@ -2,7 +2,8 @@
 
 export type ModuleParam =
   | { key: string; label: string; type: "gpio"; default: number }
-  | { key: string; label: string; type: "select"; options: string[]; default: string };
+  | { key: string; label: string; type: "select"; options: string[]; default: string; labels?: string[] }
+  | { key: string; label: string; type: "number"; min: number; max: number; step?: number; unit?: string; default: number };
 
 export type ModuleDef = {
   type: string;
@@ -47,6 +48,22 @@ export const MODULES: ModuleDef[] = [
     ],
     wiring: ["Controller TXD → GPIO{rx} (RX2)", "Controller RXD → GPIO{tx} (TX2)", "Controller GND → GND"],
   },
+  {
+    type: "fan",
+    name: "Lüfter (EC/PWM)",
+    description:
+      "Steuert einen EC-Rohrlüfter (z. B. VEVOR) direkt per PWM – 10 Stufen, manuell oder automatisch nach Temperatur & Feuchte.",
+    params: [
+      { key: "pin", label: "PWM-Pin", type: "gpio", default: 25 },
+      { key: "mode", label: "Modus", type: "select", options: ["auto", "manual"], labels: ["Automatik", "Manuell"], default: "auto" },
+      { key: "speed", label: "Stufe (manuell)", type: "number", min: 0, max: 10, default: 5 },
+      { key: "t_min", label: "Temp. Start", type: "number", min: 10, max: 40, step: 0.5, unit: "°C", default: 24 },
+      { key: "t_max", label: "Temp. Vollgas", type: "number", min: 10, max: 45, step: 0.5, unit: "°C", default: 30 },
+      { key: "h_max", label: "Feuchte Vollgas", type: "number", min: 30, max: 95, unit: "%", default: 70 },
+      { key: "min_speed", label: "Mindeststufe", type: "number", min: 0, max: 10, default: 1 },
+    ],
+    wiring: ["Lüfter PWM (Pin unter GND) → GPIO{pin}", "Lüfter GND (oben links) → GND", "Lüfter +24 V → NICHT an den ESP!"],
+  },
 ];
 
 export function defaultConfig(def: ModuleDef): ModuleConfig {
@@ -72,6 +89,8 @@ export function sanitizeModules(input: unknown): ModuleConfig[] {
       if (v === undefined) continue;
       if (p.type === "gpio" && typeof v === "number" && SAFE_GPIOS.includes(v) && !usedPins.has(v)) cfg[p.key] = v;
       else if (p.type === "select" && typeof v === "string" && p.options.includes(v)) cfg[p.key] = v;
+      else if (p.type === "number" && typeof v === "number" && Number.isFinite(v))
+        cfg[p.key] = Math.min(Math.max(v, p.min), p.max);
       else valid = false;
     }
     if (!valid) continue;
@@ -85,6 +104,6 @@ export type DeviceConfig = { interval: number; modules: ModuleConfig[] };
 
 export function sanitizeConfig(input: unknown): DeviceConfig {
   const o = (input ?? {}) as Partial<DeviceConfig>;
-  const interval = typeof o.interval === "number" ? Math.min(Math.max(Math.round(o.interval), 5), 3600) : 30;
+  const interval = typeof o.interval === "number" ? Math.min(Math.max(Math.round(o.interval), 10), 3600) : 30;
   return { interval, modules: sanitizeModules(o.modules) };
 }

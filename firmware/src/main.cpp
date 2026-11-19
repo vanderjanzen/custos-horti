@@ -46,6 +46,7 @@ struct Config {
 };
 
 Config cfg;
+SharedState g_state;
 Preferences prefs;
 String deviceId;
 std::vector<std::unique_ptr<Module>> modules;
@@ -64,7 +65,7 @@ void loadConfig() {
   cfg.interval = prefs.getUInt("interval", 30);
   cfg.modules = prefs.getString("modules", "[]");
   prefs.end();
-  if (cfg.interval < 5) cfg.interval = 5;
+  if (cfg.interval < 10) cfg.interval = 10;
 }
 
 void saveConfig() {
@@ -123,7 +124,7 @@ void applyServerConfig(JsonVariantConst c) {
   bool changed = false;
 
   uint32_t interval = c["interval"] | cfg.interval;
-  if (interval >= 5 && interval != cfg.interval) {
+  if (interval >= 10 && interval != cfg.interval) {
     cfg.interval = interval;
     changed = true;
   }
@@ -238,23 +239,34 @@ bool sendReadings() {
   String body;
   serializeJson(doc, body);
 
-  HTTPClient http;
-  WiFiClient plain;
-  WiFiClientSecure secure;
+  // Nur den Client anlegen, der gebraucht wird (ein HTTPS-Client kostet viel RAM)
+  std::unique_ptr<WiFiClient> client;
   if (cfg.server.startsWith("https")) {
-    secure.setInsecure();  // TODO: Zertifikat pruefen
-    http.begin(secure, cfg.server);
+    auto* secure = new WiFiClientSecure();
+    secure->setInsecure();  // TODO: Zertifikat pruefen
+    client.reset(secure);
   } else {
-    http.begin(plain, cfg.server);
+    client.reset(new WiFiClient());
   }
-  http.addHeader("Content-Type", "application/json");
-  if (!cfg.key.isEmpty()) http.addHeader("Authorization", "Bearer " + cfg.key);
-  http.setTimeout(5000);
 
-  int code = http.POST(body);
-  String resp = code > 0 ? http.getString() : String();
-  http.end();
-  Serial.printf("[custos] POST %s -> %d\n", body.c_str(), code);
+  int code;
+  String resp;
+  {
+    HTTPClient http;
+    http.setReuse(false);
+    http.setTimeout(5000);
+    if (!http.begin(*client, cfg.server)) {
+      Serial.println("[custos] Server-URL ungueltig");
+      return false;
+    }
+    http.addHeader("Content-Type", "application/json");
+    if (!cfg.key.isEmpty()) http.addHeader("Authorization", "Bearer " + cfg.key);
+    code = http.POST(body);
+    if (code > 0) resp = http.getString();
+    http.end();
+  }
+  client->stop();
+  Serial.printf("[custos] POST %s -> %d (heap %u)\n", body.c_str(), code, (unsigned)ESP.getFreeHeap());
 
   if (code >= 200 && code < 300 && resp.length()) {
     JsonDocument r;

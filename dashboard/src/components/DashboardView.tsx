@@ -6,6 +6,7 @@ import { ago, deviceLabel, isOnline } from "@/lib/format";
 import Segmented from "./Segmented";
 import ClimateChart, { type Point } from "./ClimateChart";
 import CountUp from "./CountUp";
+import FanControl from "./FanControl";
 
 const RANGES = ["1h", "6h", "24h", "7d", "30d"] as const;
 type Range = (typeof RANGES)[number];
@@ -31,7 +32,7 @@ function minMax(data: Point[], key: "temperature" | "humidity") {
 }
 
 export default function DashboardView() {
-  const { devices, error } = useDevices();
+  const { devices, error, reload } = useDevices();
   const now = useNow(5000);
   const [selected, setSelected] = useState<string | null>(null);
   const [range, setRange] = useState<Range>("24h");
@@ -164,6 +165,8 @@ export default function DashboardView() {
         </div>
         <ClimateChart data={data} range={range} />
       </section>
+
+      <FanControl device={device} onSaved={reload} />
     </>
   );
 }

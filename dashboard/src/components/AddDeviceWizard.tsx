@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { MODULES, SAFE_GPIOS, defaultConfig, type ModuleConfig } from "@/lib/modules";
+import { MODULES, defaultConfig, type ModuleConfig } from "@/lib/modules";
 import { flashFirmware, provisionDevice, webSerialSupported } from "@/lib/serial";
 import type { DeviceSummary } from "@/app/api/devices/route";
 import { IconUsb } from "./Icons";
+import ParamField from "./ParamField";
 
 type ProvisionInfo = {
   ingestKey: string;
@@ -122,7 +123,9 @@ export default function AddDeviceWizard() {
       if (flash && info?.firmware) {
         setPhase("connecting");
         addLog(`Lade Firmware ${info.firmware.version}…`);
-        const image = new Uint8Array(await (await fetch(info.firmware.file)).arrayBuffer());
+        // ?v=… umgeht den Cloudflare-Cache, damit immer die aktuelle Firmware kommt
+        const url = `${info.firmware.file}?v=${encodeURIComponent(info.firmware.built)}`;
+        const image = new Uint8Array(await (await fetch(url, { cache: "no-store" })).arrayBuffer());
         setPhase("flashing");
         await flashFirmware(port, image, setProgress, addLog);
         await new Promise((r) => setTimeout(r, 1500));
@@ -214,28 +217,12 @@ export default function AddDeviceWizard() {
                   {on && cfg && m.params.length > 0 && (
                     <div className="module-params">
                       {m.params.map((p) => (
-                        <label className="field" key={p.key}>
-                          <span className="eyebrow">{p.label}</span>
-                          <select
-                            className="select"
-                            value={String(cfg[p.key])}
-                            onChange={(e) =>
-                              setParam(m.type, p.key, p.type === "gpio" ? Number(e.target.value) : e.target.value)
-                            }
-                          >
-                            {p.type === "gpio"
-                              ? SAFE_GPIOS.map((g) => (
-                                  <option key={g} value={g}>
-                                    GPIO{g} (D{g})
-                                  </option>
-                                ))
-                              : p.options.map((o) => (
-                                  <option key={o} value={o}>
-                                    {o}
-                                  </option>
-                                ))}
-                          </select>
-                        </label>
+                        <ParamField
+                          key={p.key}
+                          param={p}
+                          value={cfg[p.key]}
+                          onChange={(v) => setParam(m.type, p.key, v)}
+                        />
                       ))}
                       {m.wiring && (
                         <div className="wiring">
@@ -292,7 +279,7 @@ export default function AddDeviceWizard() {
               <input
                 className="input"
                 type="number"
-                min={5}
+                min={10}
                 max={3600}
                 value={interval}
                 onChange={(e) => setIntervalSec(Number(e.target.value))}

@@ -32,6 +32,9 @@ class DhtModule : public Module {
       out["dht_error"] = true;
       return;
     }
+    g_state.temperature = t;
+    g_state.humidity = h;
+    g_state.updated = millis();
     out["temperature"] = round(t * 10) / 10.0;
     out["humidity"] = round(h * 10) / 10.0;
   }
