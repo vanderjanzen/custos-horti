@@ -241,7 +241,7 @@ export default function AddDeviceWizard() {
                         <div className="wiring">
                           <span className="eyebrow">Verkabelung</span>
                           {m.wiring.map((w) => (
-                            <code key={w}>{w.replace("{pin}", String(cfg.pin ?? ""))}</code>
+                            <code key={w}>{w.replace(/\{(\w+)\}/g, (_, k: string) => String(cfg[k] ?? ""))}</code>
                           ))}
                         </div>
                       )}

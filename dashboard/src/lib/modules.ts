@@ -36,6 +36,17 @@ export const MODULES: ModuleDef[] = [
     ],
     wiring: ["VCC → 3V3", "GND → GND", "DATA → GPIO{pin}"],
   },
+  {
+    type: "tuya",
+    name: "Tuya-Controller (Test)",
+    description:
+      "Spielt das WLAN-Modul eines Tuya-Geräts (z. B. VEVOR-Lüfter-Controller) und liest dessen Datenpunkte mit. Ausgabe im Serial Monitor.",
+    params: [
+      { key: "rx", label: "RX (von Controller-TXD)", type: "gpio", default: 16 },
+      { key: "tx", label: "TX (zu Controller-RXD)", type: "gpio", default: 17 },
+    ],
+    wiring: ["Controller TXD → GPIO{rx} (RX2)", "Controller RXD → GPIO{tx} (TX2)", "Controller GND → GND"],
+  },
 ];
 
 export function defaultConfig(def: ModuleDef): ModuleConfig {
