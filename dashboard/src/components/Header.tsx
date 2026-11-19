@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useDevices } from "@/hooks/useDevices";
 import { isOnline } from "@/lib/format";
 import { IconLeaf, IconUser } from "./Icons";
+import Segmented from "./Segmented";
+import { currentTheme, setTheme, type Theme } from "@/lib/theme";
 
 export default function Header() {
   const { devices } = useDevices();
@@ -13,6 +15,13 @@ export default function Header() {
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [theme, setThemeState] = useState<Theme>("dark");
+  useEffect(() => setThemeState(currentTheme()), []);
+
+  function changeTheme(t: Theme) {
+    setTheme(t);
+    setThemeState(t);
+  }
 
   useEffect(() => {
     if (!menu) return;
@@ -59,6 +68,17 @@ export default function Header() {
               <div className="menu-head">
                 <div>Admin</div>
                 <div className="eyebrow">angemeldet</div>
+              </div>
+              <div className="menu-row">
+                <span>Darstellung</span>
+                <Segmented
+                  value={theme}
+                  onChange={changeTheme}
+                  options={[
+                    { value: "dark", label: "Dark" },
+                    { value: "light", label: "Light" },
+                  ]}
+                />
               </div>
               <button className="menu-item" onClick={logout}>
                 Abmelden

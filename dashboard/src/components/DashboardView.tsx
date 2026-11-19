@@ -7,6 +7,10 @@ import Segmented from "./Segmented";
 import ClimateChart, { type Point } from "./ClimateChart";
 import CountUp from "./CountUp";
 import FanControl from "./FanControl";
+import VpdPanel from "./VpdPanel";
+import VpdModal from "./VpdModal";
+import { usePhase } from "@/hooks/usePhase";
+import { vpd as calcVpd } from "@/lib/vpd";
 
 const RANGES = ["1h", "6h", "24h", "7d", "30d"] as const;
 type Range = (typeof RANGES)[number];
@@ -20,12 +24,6 @@ const RESOLUTIONS = [
   { value: "1h", label: "1 Stunde" },
 ];
 
-/** Dampfdruckdefizit (VPD) in kPa aus Lufttemperatur und rel. Feuchte */
-function vpd(t: number, rh: number) {
-  const svp = 0.6108 * Math.exp((17.27 * t) / (t + 237.3));
-  return svp * (1 - rh / 100);
-}
-
 function minMax(data: Point[], key: "temperature" | "humidity") {
   const v = data.map((d) => d[key]).filter((x): x is number => x != null);
   return v.length ? { min: Math.min(...v), max: Math.max(...v) } : null;
@@ -38,6 +36,22 @@ export default function DashboardView() {
   const [range, setRange] = useState<Range>("24h");
   const [res, setRes] = useState("auto");
   const [data, setData] = useState<Point[]>([]);
+  const { phase } = usePhase();
+  const [vpdOpen, setVpdOpen] = useState(false);
+  const [showVpd, setShowVpd] = useState(false);
+
+  // VPD-Verlauf an/aus merken
+  useEffect(() => {
+    try {
+      setShowVpd(localStorage.getItem("custos_vpd_chart") === "1");
+    } catch {}
+  }, []);
+  function toggleVpd(on: boolean) {
+    setShowVpd(on);
+    try {
+      localStorage.setItem("custos_vpd_chart", on ? "1" : "0");
+    } catch {}
+  }
 
   const device = devices?.find((d) => d.id === selected) ?? devices?.[0];
 
@@ -74,7 +88,9 @@ export default function DashboardView() {
     );
 
   const online = isOnline(device.last_seen, now);
-  const v = device.temperature != null && device.humidity != null ? vpd(device.temperature, device.humidity) : null;
+  const v =
+    device.temperature != null && device.humidity != null ? calcVpd(device.temperature, device.humidity) : null;
+  const vpdStatus = !phase || v == null ? "" : v < phase.vpd[0] ? "is-low" : v > phase.vpd[1] ? "is-high" : "is-ok";
 
   return (
     <>
@@ -113,13 +129,36 @@ export default function DashboardView() {
           </div>
         </div>
 
-        <div className="stat vpd glass float reveal">
-          <div className="stat-label eyebrow">VPD</div>
+        <div
+          className="stat vpd glass float reveal is-clickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => setVpdOpen(true)}
+          onKeyDown={(e) => e.key === "Enter" && setVpdOpen(true)}
+        >
+          <div className="stat-label eyebrow">
+            VPD
+            {phase && <span className={`vpd-pill ${vpdStatus}`}>{phase.name}</span>}
+          </div>
           <div className="stat-value">
             <CountUp value={v} decimals={2} />
             <small>kPa</small>
           </div>
-          <div className="stat-meta">Dampfdruckdefizit der Luft</div>
+          <div className="stat-meta">
+            {phase ? `Ziel ${phase.vpd[0].toFixed(1)}–${phase.vpd[1].toFixed(1)} kPa` : "Dampfdruckdefizit der Luft"}
+          </div>
+          <label
+            className="switch"
+            title="VPD-Verlauf anzeigen"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <span className="switch-label">Verlauf</span>
+            <input type="checkbox" checked={showVpd} onChange={(e) => toggleVpd(e.target.checked)} />
+            <span className="switch-track">
+              <span className="switch-thumb" />
+            </span>
+          </label>
         </div>
 
         <div className={`stat glass float reveal ${online ? "live" : ""}`}>
@@ -167,6 +206,17 @@ export default function DashboardView() {
       </section>
 
       <FanControl device={device} onSaved={reload} />
+
+      {showVpd && <VpdPanel data={data} range={range} phase={phase} />}
+
+      {vpdOpen && phase && (
+        <VpdModal
+          temperature={device.temperature}
+          humidity={device.humidity}
+          phase={phase}
+          onClose={() => setVpdOpen(false)}
+        />
+      )}
     </>
   );
 }

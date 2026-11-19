@@ -76,11 +76,15 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
             step={1}
             value={speed}
             onChange={(e) => set("speed", Number(e.target.value))}
-            style={{ "--p": `${speed * 10}%` } as React.CSSProperties}
+            style={{ "--p": `calc(11px + (100% - 22px) * ${speed / 10})` } as React.CSSProperties}
           />
           <div className="fan-steps">
             {Array.from({ length: 11 }, (_, i) => (
-              <span key={i} className={i === speed ? "is-active" : ""}>
+              <span
+                key={i}
+                className={i === speed ? "is-active" : ""}
+                style={{ "--i": i } as React.CSSProperties}
+              >
                 {i}
               </span>
             ))}

@@ -7,7 +7,9 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useDevices } from "@/hooks/useDevices";
 import { isOnline } from "@/lib/format";
-import { IconDashboard, IconDevices, IconLogs, IconPlus, IconSettings } from "./Icons";
+import { IconDashboard, IconDevices, IconLogs, IconPlus, IconSettings, IconSprout } from "./Icons";
+import { usePhase } from "@/hooks/usePhase";
+import { PHASES } from "@/lib/phases";
 
 const groups = [
   {
@@ -15,6 +17,7 @@ const groups = [
     items: [
       { href: "/", label: "Dashboard", icon: IconDashboard },
       { href: "/logs", label: "Logs", icon: IconLogs },
+      { href: "/phase", label: "Grow-Phase", icon: IconSprout, phaseDots: true },
     ],
   },
   {
@@ -34,6 +37,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { devices } = useDevices();
   const online = devices?.filter((d) => isOnline(d.last_seen)).length ?? 0;
+  const { phase } = usePhase();
   const root = useRef<HTMLElement>(null);
 
   // Leuchtender Indikator gleitet zum aktiven Reiter
@@ -87,6 +91,13 @@ export default function Sidebar() {
                     </span>
                   )}
                   {"disabled" in item && item.disabled && <span className="nav-count">bald</span>}
+                  {"phaseDots" in item && item.phaseDots && (
+                    <span className="phase-dots" title={phase?.name}>
+                      {PHASES.map((p) => (
+                        <i key={p.key} className={phase?.key === p.key ? "is-on" : ""} />
+                      ))}
+                    </span>
+                  )}
                 </>
               );
               return "disabled" in item && item.disabled ? (
@@ -103,7 +114,7 @@ export default function Sidebar() {
         </div>
       ))}
       <div className="sidebar-foot">
-        <span>v0.2.0</span>
+        <span>v0.5.0</span>
         <span>{devices ? `${devices.length} Sensor${devices.length === 1 ? "" : "en"}` : "…"}</span>
       </div>
     </aside>

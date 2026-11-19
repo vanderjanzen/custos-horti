@@ -74,3 +74,15 @@ export const IconUsb = ({ size }: P) => (
     <circle cx="12" cy="19" r="2" />
   </svg>
 );
+export const IconSprout = ({ size }: P) => (
+  <svg {...base(size)}>
+    <path d="M12 21v-9" />
+    <path d="M12 12c0-4-3-6-7-6 0 4 3 6 7 6z" />
+    <path d="M12 14c0-3.5 2.5-5.5 6.5-5.5 0 3.5-2.5 5.5-6.5 5.5z" />
+  </svg>
+);
+export const IconClose = ({ size }: P) => (
+  <svg {...base(size)}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);

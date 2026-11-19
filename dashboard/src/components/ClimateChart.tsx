@@ -1,11 +1,10 @@
 "use client";
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export type Point = { t: string; temperature: number | null; humidity: number | null };
 
-const TEMP = "#ffb38a";
-const HUM = "#8be3ff";
 
 function fmtTick(iso: string, range: string) {
   const d = new Date(iso);
@@ -37,6 +36,10 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 export default function ClimateChart({ data, range }: { data: Point[]; range: string }) {
+  const c = useThemeColors();
+  if (!c) return <div className="chart-wrap" />;
+  const TEMP = c["--temp"];
+  const HUM = c["--hum"];
   if (data.length === 0) {
     return <div className="empty">Keine Daten in diesem Zeitraum.</div>;
   }
@@ -57,7 +60,7 @@ export default function ClimateChart({ data, range }: { data: Point[]; range: st
               <stop offset="100%" stopColor={HUM} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <CartesianGrid stroke={c["--chart-grid"]} vertical={false} />
           <XAxis
             dataKey="t"
             tickFormatter={(v) => fmtTick(v, range)}
@@ -68,7 +71,7 @@ export default function ClimateChart({ data, range }: { data: Point[]; range: st
           />
           <YAxis yAxisId="t" axisLine={false} tickLine={false} width={44} unit="°" allowDecimals={false} domain={[(min: number) => Math.floor(min - 0.5), (max: number) => Math.ceil(max + 0.5)]} />
           <YAxis yAxisId="h" orientation="right" axisLine={false} tickLine={false} width={44} unit="%" domain={[0, 100]} />
-          <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.25)", strokeDasharray: "3 4" }} />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: c["--chart-cursor"], strokeDasharray: "3 4" }} />
           <Area
             className="area-h"
             yAxisId="h"
@@ -78,7 +81,7 @@ export default function ClimateChart({ data, range }: { data: Point[]; range: st
             strokeWidth={3}
             fill="url(#fillHum)"
             dot={false}
-            activeDot={{ r: 5, fill: HUM, stroke: "#07090a", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: HUM, stroke: c["--bg"], strokeWidth: 2 }}
             connectNulls
             isAnimationActive={animate}
             animationDuration={1200}
@@ -93,7 +96,7 @@ export default function ClimateChart({ data, range }: { data: Point[]; range: st
             strokeWidth={3}
             fill="url(#fillTemp)"
             dot={false}
-            activeDot={{ r: 5, fill: TEMP, stroke: "#07090a", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: TEMP, stroke: c["--bg"], strokeWidth: 2 }}
             connectNulls
             isAnimationActive={animate}
             animationDuration={1200}

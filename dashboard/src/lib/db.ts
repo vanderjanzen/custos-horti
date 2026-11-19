@@ -45,6 +45,12 @@ export function ensureSchema(): Promise<void> {
           ADD COLUMN IF NOT EXISTS fan_speed SMALLINT,
           ADD COLUMN IF NOT EXISTS fan_mode TEXT`;
       await sql`
+        CREATE TABLE IF NOT EXISTS settings (
+          key        TEXT PRIMARY KEY,
+          value      JSONB NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )`;
+      await sql`
         CREATE INDEX IF NOT EXISTS readings_device_time
         ON readings (device_id, created_at DESC)`;
     })().catch((err) => {
