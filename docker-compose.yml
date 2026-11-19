@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-custos}
       POSTGRES_DB: custos
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - custos-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U custos"]
       interval: 5s
@@ -30,4 +30,4 @@ services:
       - "${DASHBOARD_PORT:-3100}:3000"
 
 volumes:
-  pgdata:
+  custos-pgdata:
