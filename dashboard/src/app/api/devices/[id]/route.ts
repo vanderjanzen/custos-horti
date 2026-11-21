@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql, ensureSchema } from "@/lib/db";
-import { sanitizeConfig } from "@/lib/modules";
+import { sanitizeConfig, type DeviceConfig } from "@/lib/modules";
+import { describeConfigChange } from "@/lib/fanEvents";
 
 /**
  * Geraet anlegen/aendern. Body (alles optional):
@@ -18,12 +19,22 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const config = "config" in body ? sanitizeConfig(body.config) : null;
 
   await ensureSchema();
+  const [before] = await sql<{ config: DeviceConfig | null }[]>`SELECT config FROM devices WHERE id = ${id}`;
   await sql`
     INSERT INTO devices (id, name, config, last_seen)
     VALUES (${id}, ${name}, ${config ? sql.json(config) : null}, to_timestamp(0))
     ON CONFLICT (id) DO UPDATE SET
       name   = CASE WHEN ${hasName} THEN EXCLUDED.name ELSE devices.name END,
       config = COALESCE(EXCLUDED.config, devices.config)`;
+
+  // Aenderungen am Luefter im Entscheidungs-Feed vermerken
+  const fanAfter = config?.modules.find((m) => m.type === "fan");
+  if (fanAfter) {
+    const prev = before?.config ? sanitizeConfig(before.config).modules.find((m) => m.type === "fan") : undefined;
+    const message = describeConfigChange(prev, fanAfter);
+    if (message)
+      await sql`INSERT INTO fan_events (device_id, kind, reason, message) VALUES (${id}, 'config', null, ${message})`;
+  }
   return NextResponse.json({ ok: true, config });
 }
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Line, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
-export type Point = { t: string; temperature: number | null; humidity: number | null };
+export type Point = { t: string; temperature: number | null; humidity: number | null; fan?: number | null };
 
 
 function fmtTick(iso: string, range: string) {
@@ -31,11 +31,17 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
         <span>Luftfeuchte</span>
         <span className="h">{p.humidity?.toFixed(0) ?? "–"} %</span>
       </div>
+      {p.fan != null && (
+        <div className="row">
+          <span>Lüfter</span>
+          <span className="f">{Math.round(p.fan)} %</span>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function ClimateChart({ data, range }: { data: Point[]; range: string }) {
+export default function ClimateChart({ data, range, showFan = true }: { data: Point[]; range: string; showFan?: boolean }) {
   const c = useThemeColors();
   if (!c) return <div className="chart-wrap" />;
   const TEMP = c["--temp"];
@@ -102,6 +108,21 @@ export default function ClimateChart({ data, range }: { data: Point[]; range: st
             animationDuration={1200}
             animationEasing="ease-out"
           />
+          {showFan && (
+            <Line
+              yAxisId="h"
+              type="monotone"
+              dataKey="fan"
+              stroke={c["--accent"]}
+              strokeWidth={1.5}
+              strokeDasharray="4 4"
+              dot={false}
+              activeDot={{ r: 4, fill: c["--accent"], stroke: c["--bg"], strokeWidth: 2 }}
+              connectNulls
+              isAnimationActive={animate}
+              animationDuration={1200}
+            />
+          )}
         </AreaChart>
       </ResponsiveContainer>
     </div>

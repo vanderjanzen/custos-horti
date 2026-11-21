@@ -51,7 +51,7 @@ export type ProvisionPayload = {
   server: string;
   key: string;
   interval: number;
-  modules: Record<string, string | number | boolean>[];
+  modules: Record<string, string | number | boolean | number[]>[];
 };
 
 /** Mit der laufenden Firmware sprechen und die Einrichtung schicken. Gibt die Geraete-ID zurueck. */

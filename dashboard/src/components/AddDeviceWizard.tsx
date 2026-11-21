@@ -214,9 +214,9 @@ export default function AddDeviceWizard() {
                     </span>
                   </button>
 
-                  {on && cfg && m.params.length > 0 && (
+                  {on && cfg && m.params.some((p) => !p.advanced) && (
                     <div className="module-params">
-                      {m.params.map((p) => (
+                      {m.params.filter((p) => !p.advanced).map((p) => (
                         <ParamField
                           key={p.key}
                           param={p}

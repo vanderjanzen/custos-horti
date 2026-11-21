@@ -1,6 +1,6 @@
 "use client";
 
-import { SAFE_GPIOS, type ModuleParam } from "@/lib/modules";
+import { SAFE_GPIOS, type ConfigValue, type ModuleParam } from "@/lib/modules";
 
 /** Eingabefeld fuer einen Modul-Parameter (GPIO, Auswahl oder Zahl) */
 export default function ParamField({
@@ -11,9 +11,10 @@ export default function ParamField({
 }: {
   param: ModuleParam;
   label?: string;
-  value: string | number | boolean | undefined;
+  value: ConfigValue | undefined;
   onChange: (v: string | number | boolean) => void;
 }) {
+  if (p.type === "points") return null; // eigene Kurven werden im Kurven-Editor bearbeitet
   if (p.type === "bool") {
     return (
       <label className="checkbox">

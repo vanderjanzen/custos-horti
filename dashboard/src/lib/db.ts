@@ -51,6 +51,24 @@ export function ensureSchema(): Promise<void> {
           value      JSONB NOT NULL,
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )`;
+      // v0.7: stufenloser Luefter (Prozent), Regler-Zustand, Entscheidungs-Feed
+      await sql`ALTER TABLE devices ALTER COLUMN fan_speed TYPE REAL`;
+      await sql`
+        ALTER TABLE devices
+          ADD COLUMN IF NOT EXISTS fan_target REAL,
+          ADD COLUMN IF NOT EXISTS fan_state  JSONB`;
+      await sql`ALTER TABLE readings ADD COLUMN IF NOT EXISTS fan REAL`;
+      await sql`
+        CREATE TABLE IF NOT EXISTS fan_events (
+          id         BIGSERIAL PRIMARY KEY,
+          device_id  TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+          kind       TEXT NOT NULL,
+          speed      REAL,
+          reason     TEXT,
+          message    TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )`;
+      await sql`CREATE INDEX IF NOT EXISTS fan_events_device_time ON fan_events (device_id, created_at DESC)`;
       await sql`
         CREATE INDEX IF NOT EXISTS readings_device_time
         ON readings (device_id, created_at DESC)`;

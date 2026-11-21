@@ -17,7 +17,7 @@ type Range = (typeof RANGES)[number];
 
 const RESOLUTIONS = [
   { value: "auto", label: "Auflösung: Auto" },
-  { value: "raw", label: "Rohdaten (30 s)" },
+  { value: "raw", label: "Rohdaten" },
   { value: "1m", label: "1 Minute" },
   { value: "5m", label: "5 Minuten" },
   { value: "15m", label: "15 Minuten" },
@@ -183,6 +183,11 @@ export default function DashboardView() {
               <span style={{ "--c": "var(--hum)" } as React.CSSProperties}>
                 <i /> Luftfeuchte %
               </span>
+              {data.some((d) => d.fan != null) && (
+                <span className="is-dashed" style={{ "--c": "var(--accent)" } as React.CSSProperties}>
+                  <i /> Lüfter %
+                </span>
+              )}
             </div>
           </div>
           <div className="controls">

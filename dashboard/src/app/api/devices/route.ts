@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql, ensureSchema } from "@/lib/db";
+import type { ModuleConfig } from "@/lib/modules";
+import type { FanState } from "@/lib/fanEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +20,16 @@ export type DeviceSummary = {
   fan_speed: number | null;
   fan_mode: string | null;
   fan_reason: string | null;
-  config: { interval: number; modules: { type: string; [k: string]: string | number | boolean }[] } | null;
+  fan_target: number | null;
+  fan_state: FanState | null;
+  config: { interval: number; modules: ModuleConfig[] } | null;
 };
 
 /** Alle Geraete mit ihrer letzten Messung */
 export async function GET() {
   await ensureSchema();
   const rows = await sql<DeviceSummary[]>`
-    SELECT d.id, d.name, d.fw, d.rssi, d.last_seen, d.uptime, d.heap, d.ip, d.modules, d.config, d.fan_speed, d.fan_mode, d.fan_reason,
+    SELECT d.id, d.name, d.fw, d.rssi, d.last_seen, d.uptime, d.heap, d.ip, d.modules, d.config, d.fan_speed, d.fan_mode, d.fan_reason, d.fan_target, d.fan_state,
            r.temperature, r.humidity
     FROM devices d
     LEFT JOIN LATERAL (
