@@ -43,7 +43,8 @@ export function ensureSchema(): Promise<void> {
           ADD COLUMN IF NOT EXISTS ip      TEXT,
           ADD COLUMN IF NOT EXISTS modules TEXT[],
           ADD COLUMN IF NOT EXISTS fan_speed SMALLINT,
-          ADD COLUMN IF NOT EXISTS fan_mode TEXT`;
+          ADD COLUMN IF NOT EXISTS fan_mode TEXT,
+          ADD COLUMN IF NOT EXISTS fan_reason TEXT`;
       await sql`
         CREATE TABLE IF NOT EXISTS settings (
           key        TEXT PRIMARY KEY,

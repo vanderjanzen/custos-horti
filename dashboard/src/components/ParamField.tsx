@@ -7,15 +7,25 @@ export default function ParamField({
   param: p,
   value,
   onChange,
+  label,
 }: {
   param: ModuleParam;
-  value: string | number | undefined;
-  onChange: (v: string | number) => void;
+  label?: string;
+  value: string | number | boolean | undefined;
+  onChange: (v: string | number | boolean) => void;
 }) {
+  if (p.type === "bool") {
+    return (
+      <label className="checkbox">
+        <input type="checkbox" checked={Boolean(value ?? p.default)} onChange={(e) => onChange(e.target.checked)} />
+        <span>{label ?? p.label}</span>
+      </label>
+    );
+  }
   return (
     <label className="field">
       <span className="eyebrow">
-        {p.label}
+        {label ?? p.label}
         {p.type === "number" && p.unit ? ` (${p.unit})` : ""}
       </span>
       {p.type === "number" ? (
@@ -25,7 +35,7 @@ export default function ParamField({
           min={p.min}
           max={p.max}
           step={p.step ?? 1}
-          value={value ?? p.default}
+          value={Number(value ?? p.default)}
           onChange={(e) => onChange(Number(e.target.value))}
         />
       ) : (

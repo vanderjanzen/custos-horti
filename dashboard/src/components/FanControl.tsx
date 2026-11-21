@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DeviceSummary } from "@/app/api/devices/route";
-import { MODULES, type ModuleConfig } from "@/lib/modules";
+import { MODULES, defaultConfig, type ModuleConfig } from "@/lib/modules";
 import Segmented from "./Segmented";
 import ParamField from "./ParamField";
 import { useRole } from "@/hooks/useRole";
@@ -11,7 +11,9 @@ const FAN = MODULES.find((m) => m.type === "fan")!;
 
 /** Luefter-Steuerung: Modus, Stufe bzw. Automatik-Grenzen. Wird beim naechsten Messwert vom ESP uebernommen. */
 export default function FanControl({ device, onSaved }: { device: DeviceSummary; onSaved: () => void }) {
-  const saved = device.config?.modules.find((m) => m.type === "fan") as ModuleConfig | undefined;
+  const found = device.config?.modules.find((m) => m.type === "fan") as ModuleConfig | undefined;
+  // Fehlende Felder (aeltere Configs) mit Standardwerten auffuellen
+  const saved = found ? ({ ...defaultConfig(FAN), ...found } as ModuleConfig) : undefined;
   const [cfg, setCfg] = useState<ModuleConfig | null>(saved ?? null);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const { isGuest } = useRole();
@@ -25,7 +27,7 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
   if (!saved || !cfg) return null;
 
   const mode = cfg.mode === "manual" ? "manual" : "auto";
-  const set = (key: string, v: string | number) => {
+  const set = (key: string, v: string | number | boolean) => {
     setCfg({ ...cfg, [key]: v });
     setState("idle");
   };
@@ -43,7 +45,18 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
     onSaved();
   }
 
-  const autoParams = FAN.params.filter((p) => ["t_min", "t_max", "h_max", "min_speed"].includes(p.key));
+  const param = (key: string) => FAN.params.find((p) => p.key === key)!;
+  const field = (key: string, label?: string) => (
+    <ParamField key={key} param={param(key)} label={label} value={cfg[key]} onChange={(v) => set(key, v)} />
+  );
+  const useTemp = Boolean(cfg.use_temp);
+  const useHum = Boolean(cfg.use_hum);
+  const reasonText: Record<string, string> = {
+    temp: "wegen Temperatur",
+    hum: "wegen Feuchte",
+    "temp+hum": "wegen Temperatur & Feuchte",
+    idle: "kein Bedarf",
+  };
   const speed = Number(cfg.speed ?? 5);
 
   return (
@@ -57,6 +70,7 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
               Stufe {device.fan_speed ?? "–"}
             </span>
             {device.fan_mode && ` · ${device.fan_mode === "auto" ? "Automatik" : "manuell"}`}
+            {device.fan_mode === "auto" && device.fan_reason && ` · ${reasonText[device.fan_reason] ?? ""}`}
           </p>
         </div>
         {isGuest ? (
@@ -98,13 +112,43 @@ export default function FanControl({ device, onSaved }: { device: DeviceSummary;
           </div>
         </div>
       ) : (
-        <div className="fan-auto">
-          {autoParams.map((p) => (
-            <ParamField key={p.key} param={p} value={cfg[p.key]} onChange={(v) => set(p.key, v)} />
-          ))}
-          <p className="hint" style={{ gridColumn: "1 / -1" }}>
-            Ab {cfg.t_min} °C läuft der Lüfter auf Stufe {cfg.min_speed} und steigt bis {cfg.t_max} °C auf Stufe 10.
-            Feuchte ab {Number(cfg.h_max) - 10} % treibt ihn zusätzlich hoch.
+        <div className="fan-auto2">
+          <div className={`fan-group ${useTemp ? "" : "is-off"}`}>
+            {field("use_temp")}
+            <div className="fan-fields">
+              {field("t_min", "Start")}
+              {field("t_max", "Vollgas")}
+            </div>
+          </div>
+          <div className={`fan-group ${useHum ? "" : "is-off"}`}>
+            {field("use_hum")}
+            <div className="fan-fields">
+              {field("h_min", "Start")}
+              {field("h_max", "Vollgas")}
+            </div>
+          </div>
+          <div className="fan-group">
+            <span className="eyebrow">Stufen</span>
+            <div className="fan-fields three">
+              {field("min_speed", "Start")}
+              {field("max_speed", "Maximal")}
+              {field("idle_speed", "Leerlauf")}
+            </div>
+          </div>
+          <p className="hint fan-explain">
+            {!useTemp && !useHum
+              ? `Keine Regelung aktiv – der Lüfter läuft dauerhaft auf Stufe ${cfg.idle_speed}.`
+              : [
+                  useTemp &&
+                    `ab ${cfg.t_min} °C Stufe ${cfg.min_speed}, bis ${cfg.t_max} °C steigend auf Stufe ${cfg.max_speed}`,
+                  useHum &&
+                    `ab ${cfg.h_min} % Feuchte Stufe ${cfg.min_speed}, bis ${cfg.h_max} % steigend auf Stufe ${cfg.max_speed}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") +
+                ` – es gilt jeweils der höhere Wert. Ohne Bedarf: Stufe ${cfg.idle_speed}${
+                  Number(cfg.idle_speed) === 0 ? " (aus)" : ""
+                }.`}
           </p>
         </div>
       )}

@@ -17,14 +17,15 @@ export type DeviceSummary = {
   modules: string[] | null;
   fan_speed: number | null;
   fan_mode: string | null;
-  config: { interval: number; modules: { type: string; [k: string]: string | number }[] } | null;
+  fan_reason: string | null;
+  config: { interval: number; modules: { type: string; [k: string]: string | number | boolean }[] } | null;
 };
 
 /** Alle Geraete mit ihrer letzten Messung */
 export async function GET() {
   await ensureSchema();
   const rows = await sql<DeviceSummary[]>`
-    SELECT d.id, d.name, d.fw, d.rssi, d.last_seen, d.uptime, d.heap, d.ip, d.modules, d.config, d.fan_speed, d.fan_mode,
+    SELECT d.id, d.name, d.fw, d.rssi, d.last_seen, d.uptime, d.heap, d.ip, d.modules, d.config, d.fan_speed, d.fan_mode, d.fan_reason,
            r.temperature, r.humidity
     FROM devices d
     LEFT JOIN LATERAL (

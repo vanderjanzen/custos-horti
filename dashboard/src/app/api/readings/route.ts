@@ -35,19 +35,20 @@ export async function POST(req: NextRequest) {
   const ip = typeof body.ip === "string" ? body.ip.slice(0, 45) : null;
   const fanSpeed = num(body.fan_speed);
   const fanMode = typeof body.fan_mode === "string" ? body.fan_mode.slice(0, 16) : null;
+  const fanReason = typeof body.fan_reason === "string" ? body.fan_reason.slice(0, 16) : null;
   const modules = Array.isArray(body.modules)
     ? body.modules.filter((m): m is string => typeof m === "string").slice(0, 20)
     : null;
 
   await ensureSchema();
   const [device] = await sql<{ config: unknown }[]>`
-    INSERT INTO devices (id, fw, rssi, uptime, heap, ip, modules, fan_speed, fan_mode, last_seen)
-    VALUES (${deviceId}, ${fw}, ${rssi}, ${uptime}, ${heap}, ${ip}, ${modules}, ${fanSpeed}, ${fanMode}, now())
+    INSERT INTO devices (id, fw, rssi, uptime, heap, ip, modules, fan_speed, fan_mode, fan_reason, last_seen)
+    VALUES (${deviceId}, ${fw}, ${rssi}, ${uptime}, ${heap}, ${ip}, ${modules}, ${fanSpeed}, ${fanMode}, ${fanReason}, now())
     ON CONFLICT (id) DO UPDATE
       SET fw = COALESCE(EXCLUDED.fw, devices.fw), rssi = COALESCE(EXCLUDED.rssi, devices.rssi),
           uptime = COALESCE(EXCLUDED.uptime, devices.uptime), heap = COALESCE(EXCLUDED.heap, devices.heap),
           ip = COALESCE(EXCLUDED.ip, devices.ip), modules = COALESCE(EXCLUDED.modules, devices.modules),
-          fan_speed = EXCLUDED.fan_speed, fan_mode = EXCLUDED.fan_mode,
+          fan_speed = EXCLUDED.fan_speed, fan_mode = EXCLUDED.fan_mode, fan_reason = EXCLUDED.fan_reason,
           last_seen = now()
     RETURNING config`;
   if (temperature !== null || humidity !== null) {

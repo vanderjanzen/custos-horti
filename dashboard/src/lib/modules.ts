@@ -3,7 +3,8 @@
 export type ModuleParam =
   | { key: string; label: string; type: "gpio"; default: number }
   | { key: string; label: string; type: "select"; options: string[]; default: string; labels?: string[] }
-  | { key: string; label: string; type: "number"; min: number; max: number; step?: number; unit?: string; default: number };
+  | { key: string; label: string; type: "number"; min: number; max: number; step?: number; unit?: string; default: number }
+  | { key: string; label: string; type: "bool"; default: boolean };
 
 export type ModuleDef = {
   type: string;
@@ -14,7 +15,7 @@ export type ModuleDef = {
   wiring?: string[];
 };
 
-export type ModuleConfig = { type: string; [key: string]: string | number };
+export type ModuleConfig = { type: string; [key: string]: string | number | boolean };
 
 /** GPIOs, die am ESP32-DevKit gefahrlos als Ein-/Ausgang nutzbar sind */
 export const SAFE_GPIOS = [4, 5, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33];
@@ -57,10 +58,15 @@ export const MODULES: ModuleDef[] = [
       { key: "pin", label: "PWM-Pin", type: "gpio", default: 25 },
       { key: "mode", label: "Modus", type: "select", options: ["auto", "manual"], labels: ["Automatik", "Manuell"], default: "auto" },
       { key: "speed", label: "Stufe (manuell)", type: "number", min: 0, max: 10, default: 5 },
+      { key: "use_temp", label: "Nach Temperatur regeln", type: "bool", default: true },
       { key: "t_min", label: "Temp. Start", type: "number", min: 10, max: 40, step: 0.5, unit: "°C", default: 24 },
       { key: "t_max", label: "Temp. Vollgas", type: "number", min: 10, max: 45, step: 0.5, unit: "°C", default: 30 },
-      { key: "h_max", label: "Feuchte Vollgas", type: "number", min: 30, max: 95, unit: "%", default: 70 },
-      { key: "min_speed", label: "Mindeststufe", type: "number", min: 0, max: 10, default: 1 },
+      { key: "use_hum", label: "Nach Luftfeuchte regeln", type: "bool", default: true },
+      { key: "h_min", label: "Feuchte Start", type: "number", min: 20, max: 95, unit: "%", default: 65 },
+      { key: "h_max", label: "Feuchte Vollgas", type: "number", min: 25, max: 99, unit: "%", default: 80 },
+      { key: "min_speed", label: "Startstufe", type: "number", min: 0, max: 10, default: 1 },
+      { key: "max_speed", label: "Höchststufe", type: "number", min: 1, max: 10, default: 10 },
+      { key: "idle_speed", label: "Grundstufe ohne Bedarf", type: "number", min: 0, max: 10, default: 0 },
     ],
     wiring: ["Lüfter PWM (Pin unter GND) → GPIO{pin}", "Lüfter GND (oben links) → GND", "Lüfter +24 V → NICHT an den ESP!"],
   },
@@ -91,6 +97,7 @@ export function sanitizeModules(input: unknown): ModuleConfig[] {
       else if (p.type === "select" && typeof v === "string" && p.options.includes(v)) cfg[p.key] = v;
       else if (p.type === "number" && typeof v === "number" && Number.isFinite(v))
         cfg[p.key] = Math.min(Math.max(v, p.min), p.max);
+      else if (p.type === "bool" && typeof v === "boolean") cfg[p.key] = v;
       else valid = false;
     }
     if (!valid) continue;

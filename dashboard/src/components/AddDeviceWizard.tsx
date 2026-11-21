@@ -103,7 +103,7 @@ export default function AddDeviceWizard() {
     });
   }
 
-  function setParam(type: string, key: string, value: string | number) {
+  function setParam(type: string, key: string, value: string | number | boolean) {
     setActive((a) => ({ ...a, [type]: { ...a[type], [key]: value } }));
   }
 
