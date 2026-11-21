@@ -8,7 +8,12 @@
 // { "type": "fan", "pin": 25, "mode": "auto" | "manual", "speed": 5,
 //   "use_temp": true,  "t_min": 24, "t_max": 30,      // Temperatur: ab t_min an, bis t_max hochregeln
 //   "use_hum":  true,  "h_min": 65, "h_max": 80,      // Feuchte:    ab h_min an, bis h_max hochregeln
+//   "use_vpd": false, "vpd_phase": true, "vpd_min": 0.8, "vpd_max": 1.2, "vpd_span": 0.4,
 //   "min_speed": 1, "max_speed": 10, "idle_speed": 0 } // Startstufe, Hoechststufe, Stufe ohne Bedarf
+//
+// VPD: Abluft senkt die Feuchte und hebt damit den VPD. Faellt der VPD unter vpd_min (zu feucht),
+// laeuft der Luefter an und steigt bis max_speed, wenn er vpd_span kPa darunter liegt.
+// Ist VPD aktiv, ersetzt es die reine Feuchte-Regelung. vpd_min/vpd_max setzt der Server aus der Grow-Phase.
 //
 // Automatik: Jede aktive Regelung (Haken) berechnet ihre Stufe – unter der Startschwelle "kein Bedarf",
 // ab der Schwelle min_speed, linear steigend bis max_speed an der Vollgas-Schwelle. Es gilt die hoechste.
@@ -40,6 +45,10 @@ class FanModule : public Module {
     minSpeed_ = clampSpeed(cfg["min_speed"] | 1);
     maxSpeed_ = clampSpeed(cfg["max_speed"] | 10);
     idleSpeed_ = clampSpeed(cfg["idle_speed"] | 0);
+    useVpd_ = cfg["use_vpd"] | false;
+    vpdMin_ = cfg["vpd_min"] | 0.8f;
+    vpdSpan_ = cfg["vpd_span"] | 0.4f;
+    if (vpdSpan_ < 0.05f) vpdSpan_ = 0.05f;
     if (tMax_ <= tMin_) tMax_ = tMin_ + 1;
     if (hMax_ <= hMin_) hMax_ = hMin_ + 1;
     if (maxSpeed_ < minSpeed_) maxSpeed_ = minSpeed_;
@@ -62,7 +71,12 @@ class FanModule : public Module {
     out["fan_speed"] = speed_;
     out["fan_mode"] = auto_ ? "auto" : "manual";
     if (auto_) {
-      const char* reason = tempActive_ && humActive_ ? "temp+hum" : tempActive_ ? "temp" : humActive_ ? "hum" : "idle";
+      bool wet = humActive_ || vpdActive_;
+      const char* reason = tempActive_ && wet ? (vpdActive_ ? "temp+vpd" : "temp+hum")
+                           : tempActive_      ? "temp"
+                           : vpdActive_       ? "vpd"
+                           : humActive_       ? "hum"
+                                              : "idle";
       out["fan_reason"] = reason;
     }
   }
@@ -75,8 +89,10 @@ class FanModule : public Module {
   uint8_t pin_ = 25;
   bool auto_ = true;
   uint8_t manualSpeed_ = 5, minSpeed_ = 1, maxSpeed_ = 10, idleSpeed_ = 0, speed_ = 255;
-  bool useTemp_ = true, useHum_ = true;
-  bool tempActive_ = false, humActive_ = false;  // fuer Hysterese
+  bool useTemp_ = true, useHum_ = true, useVpd_ = false;
+  bool tempActive_ = false, humActive_ = false, vpdActive_ = false;  // fuer Hysterese
+  float vpdMin_ = 0.8f, vpdSpan_ = 0.4f;
+  static constexpr float V_HYST = 0.05f;  // kPa
   float tMin_ = 24, tMax_ = 30, hMin_ = 70, hMax_ = 80;
   static constexpr float T_HYST = 0.5f;  // °C
   static constexpr float H_HYST = 2.0f;  // %
@@ -121,11 +137,26 @@ class FanModule : public Module {
     } else {
       tempActive_ = false;
     }
-    if (useHum_) {
-      float hs = curve(g_state.humidity, hMin_, hMax_, humActive_, H_HYST);
-      if (hs > s) s = hs;
-    } else {
+    if (useVpd_) {
+      // Zu feucht = VPD unter Ziel. Wir regeln auf das "Defizit" (vpd_min - VPD):
+      // 0 -> Startstufe, vpd_span -> Hoechststufe
       humActive_ = false;
+      float t = g_state.temperature, h = g_state.humidity;
+      float deficit = NAN;
+      if (!isnan(t) && !isnan(h)) {
+        float svp = 0.6108f * expf((17.27f * t) / (t + 237.3f));
+        deficit = vpdMin_ - svp * (1.0f - h / 100.0f);
+      }
+      float vs = curve(deficit, 0.0f, vpdSpan_, vpdActive_, V_HYST);
+      if (vs > s) s = vs;
+    } else {
+      vpdActive_ = false;
+      if (useHum_) {
+        float hs = curve(g_state.humidity, hMin_, hMax_, humActive_, H_HYST);
+        if (hs > s) s = hs;
+      } else {
+        humActive_ = false;
+      }
     }
     if (s < idleSpeed_) s = idleSpeed_;
     return clampSpeed((int)lroundf(s));
